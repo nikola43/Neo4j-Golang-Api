@@ -254,6 +254,7 @@ func (o *User) GetUserByID(con bolt.Conn) error {
 			currentNode := element.(graph.Node)
 			o.ID = currentNode.NodeIdentity
 			o.Name = currentNode.Properties["name"].(string)
+			o.Username  = currentNode.Properties["username"].(string)
 			o.ApiToken = currentNode.Properties["api_token"].(string)
 		}
 	} else {
