@@ -15,7 +15,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		utils.RespondHttpError(w, http.StatusUnprocessableEntity, "Invalid resquest payload")
 		return
 	}
-	err := user.Login()
+	err := user.Login(con)
 	utils.RespondHttpRequest(w, err, user)
 }
 
@@ -30,36 +30,36 @@ func SingUp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Insert user
-	err := user.SingUp()
+	err := user.SingUp(con)
 	utils.RespondHttpRequest(w, err, nil)
 }
 
 func GetUserByID(w http.ResponseWriter, r *http.Request) {
 	user := &models.User{ID: utils.ReadHttpRequestIntegerParam(w, r, "id")}
-	err := user.GetUserByID()
+	err := user.GetUserByID(con)
 	utils.RespondHttpRequest(w, err, user)
 }
 
 func InviteUser(w http.ResponseWriter, r *http.Request) {
 	user := &models.User{ID: utils.ReadHttpRequestIntegerParam(w, r, "invite_id")}
-	err := user.InviteUser(utils.ReadHttpRequestIntegerParam(w, r, "invited_id"))
+	err := user.InviteUser(con, utils.ReadHttpRequestIntegerParam(w, r, "invited_id"))
 	utils.RespondHttpRequest(w, err, nil)
 }
 
 func GetNumberOfInvitedUsers(w http.ResponseWriter, r *http.Request) {
 	user := &models.User{ID: utils.ReadHttpRequestIntegerParam(w, r, "id")}
-	resp, err := user.GetNumberOfInvitedUsers()
+	resp, err := user.GetNumberOfInvitedUsers(con)
 	utils.RespondHttpRequest(w, err, resp)
 }
 
 func GetNumberOfUsers(w http.ResponseWriter, r *http.Request) {
 	user := &models.User{}
-	resp, err := user.GetNumberOfUsers()
+	resp, err := user.GetNumberOfUsers(con)
 	utils.RespondHttpRequest(w, err, resp)
 }
 
 func GetAll(w http.ResponseWriter, r *http.Request) {
 	user := &models.User{}
-	users, err := user.GetAll()
+	users, err := user.GetAll(con)
 	utils.RespondHttpRequest(w, err, users)
 }

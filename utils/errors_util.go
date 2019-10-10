@@ -1,13 +1,8 @@
 package utils
 
-import (
-	"fmt"
-	"log"
-)
-
-func CheckIfErrorExists(err error) {
+// Here we create a simple function that will take care of errors, helping with some code clean up
+func HandleError(err error) {
 	if err != nil {
-		fmt.Println(err.Error())
-		log.Fatal()
+		panic(err)
 	}
 }

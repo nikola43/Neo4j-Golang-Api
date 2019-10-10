@@ -3,9 +3,13 @@ package controllers
 import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	bolt "github.com/johnnadratowski/golang-neo4j-bolt-driver"
+	"github.com/nikola43/ecodadys_api/utils"
 	"log"
 	"net/http"
 )
+
+var con bolt.Conn
 
 type App struct {
 	Router *mux.Router
@@ -18,6 +22,10 @@ func (a *App) Initialize() {
 }
 
 func (a *App) Run(addr string) {
+	con = utils.CreateConnection()
+	defer func() {
+		_ = con.Close()
+	}()
 	allowedHeaders := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
 	allowedOrigins := handlers.AllowedOrigins([]string{"*"})
 	allowedMethods := handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE"})

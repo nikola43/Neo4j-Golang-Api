@@ -26,9 +26,10 @@ func TestInsert(t *testing.T) {
 
 	i := 0
 	start := time.Now()
-	for i = 0; i < 2000; i++ {
+	for i = 0; i < 1000; i++ {
 		user := &models.User{Name: utils.GenerateRandomString(10), Username: utils.GenerateRandomString(10), Password: utils.GenerateRandomString(10)}
 		utils.PostRequest(url, token, user)
+		time.Sleep(50 * time.Microsecond)
 	}
 	elapsed := time.Since(start)
 	log.Printf("took %s", elapsed)
@@ -41,8 +42,9 @@ func TestGetUser(t *testing.T) {
 
 	i := 0
 	start := time.Now()
-	for i = 0; i < 1000; i++ {
+	for i = 0; i < 10000; i++ {
 		utils.GetRequest(url, token, nil)
+
 	}
 	elapsed := time.Since(start)
 	log.Printf("took %s", elapsed)

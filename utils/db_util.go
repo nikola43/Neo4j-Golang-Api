@@ -1,13 +1,50 @@
 package utils
 
 import (
-	driver "github.com/johnnadratowski/golang-neo4j-bolt-driver"
+	bolt "github.com/johnnadratowski/golang-neo4j-bolt-driver"
+
 	"log"
 )
 
+func CreateConnection() bolt.Conn {
+	con, err := bolt.NewDriver().OpenNeo("bolt://neo4j:123456@localhost:7687")
+	HandleError(err)
+	return con
+}
+
+// Here we prepare a new statement. This gives us the flexibility to
+// cancel that statement without any request sent to Neo
+func PrepareSatement(query string, con bolt.Conn) bolt.Stmt {
+	st, err := con.PrepareNeo(query)
+	HandleError(err)
+	return st
+}
+
+// Executing a statement just returns summary information
+func ExecuteStatement(st bolt.Stmt, params map[string]interface{}) {
+	result, err := st.ExecNeo(params)
+	HandleError(err)
+	numResult, err := result.RowsAffected()
+	HandleError(err)
+	log.Printf("CREATED ROWS: %d\n", numResult) // CREATED ROWS: 1
+
+	// Closing the statement will also close the rows
+	defer func() {
+		_ = st.Close()
+	}()
+}
+
+func QueryStatement(st bolt.Stmt, params map[string]interface{}) bolt.Rows {
+	// Even once I get the rows, if I do not consume them and close the
+	// rows, Neo will discard and not send the data
+	rows, err := st.QueryNeo(params)
+	HandleError(err)
+	return rows
+}
+
 func UpdateToken(username string, api_token string) {
 	// open connection
-	db, err := driver.NewDriver().OpenNeo("bolt://neo4j:123456@localhost:7687")
+	db, err := bolt.NewDriver().OpenNeo("bolt://neo4j:123456@localhost:7687")
 	if err != nil {
 		log.Println("error connecting to neo4j:", err)
 	}
@@ -15,7 +52,7 @@ func UpdateToken(username string, api_token string) {
 		_ = db.Close()
 	}()
 
-	cypher :=  `MATCH (n:Comercial { username: {username} })
+	cypher := `MATCH (n:Comercial { username: {username} })
 				SET n.api_token = {api_token}
 				RETURN n.name`
 
@@ -33,7 +70,7 @@ func CheckIfUsersExistsOnDB(username string) bool {
 	var exists = false
 
 	// Open connection
-	db, err := driver.NewDriver().OpenNeo("bolt://neo4j:123456@localhost:7687")
+	db, err := bolt.NewDriver().OpenNeo("bolt://neo4j:123456@localhost:7687")
 	if err != nil {
 		log.Println("error connecting to neo4j:", err)
 	}

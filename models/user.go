@@ -3,7 +3,7 @@ package models
 import (
 	"database/sql"
 	"fmt"
-	driver "github.com/johnnadratowski/golang-neo4j-bolt-driver"
+	bolt "github.com/johnnadratowski/golang-neo4j-bolt-driver"
 	"github.com/johnnadratowski/golang-neo4j-bolt-driver/structures/graph"
 	"github.com/nikola43/ecodadys_api/utils"
 	"log"
@@ -17,45 +17,24 @@ type User struct {
 	ApiToken string `json:"api_token"`
 }
 
-func (o *User) Login() error {
-
-	db, err := driver.NewDriver().OpenNeo("bolt://neo4j:123456@localhost:7687")
-	if err != nil {
-		log.Println("error connecting to neo4j:", err)
-		return err
-	}
-	defer func() {
-		_ = db.Close()
-	}()
-
+func (o *User) Login(con bolt.Conn) error {
 	// Create query
 	cypher := `
-	  MATCH (n:Comercial)
-      WHERE n.username = {username}
-	  RETURN n`
-
-	// Prepare query
-	stmt, err := db.PrepareNeo(cypher)
-	if err != nil {
-		log.Println("error preparing graph:", err)
-		return err
-	}
-	defer func() {
-		_ = stmt.Close()
-	}()
+		  MATCH (n:Comercial)
+		  WHERE n.username = {username}
+		  RETURN n`
 
 	// Create query params
-	query := map[string]interface{}{"username": o.Username}
+	params := map[string]interface{}{"username": o.Username}
 
-	// Make query
-	rows, err := stmt.QueryNeo(query)
-	if err != nil {
-		log.Println("error querying graph:", err)
-		return err
-	}
+	st := utils.PrepareSatement(cypher, con)
+	rows := utils.QueryStatement(st, params)
+	defer func() {
+		_ = st.Close()
+	}()
 
 	// check results
-	row, _, err := rows.NextNeo()
+	row, _, _ := rows.NextNeo()
 	if len(row) > 0 {
 		for _, element := range row {
 			currentNode := element.(graph.Node)
@@ -94,40 +73,19 @@ func (o *User) Login() error {
 	return nil
 }
 
-func (o *User) GetNumberOfUsers() (int64, error) {
+func (o *User) GetNumberOfUsers(con bolt.Conn) (int64, error) {
 	var number int64
-
-	db, err := driver.NewDriver().OpenNeo("bolt://neo4j:123456@localhost:7687")
-	if err != nil {
-		log.Println("error connecting to neo4j:", err)
-		return 0, err
-	}
-	defer func() {
-		_ = db.Close()
-	}()
 
 	// Create query
 	cypher := `MATCH (n) RETURN count(*)`
-
-	// Prepare query
-	stmt, err := db.PrepareNeo(cypher)
-	if err != nil {
-		log.Println("error preparing graph:", err)
-		return 0, err
-	}
+	st := utils.PrepareSatement(cypher, con)
+	rows := utils.QueryStatement(st, nil)
 	defer func() {
-		_ = stmt.Close()
+		_ = st.Close()
 	}()
 
-	// Make query
-	rows, err := stmt.QueryNeo(nil)
-	if err != nil {
-		log.Println("error querying graph:", err)
-		return 0, err
-	}
-
 	// check results
-	row, _, err := rows.NextNeo()
+	row, _, _ := rows.NextNeo()
 	if len(row) > 0 {
 		log.Println("sss found")
 		for _, element := range row {
@@ -143,43 +101,23 @@ func (o *User) GetNumberOfUsers() (int64, error) {
 	return number, nil
 }
 
-func (o *User) GetNumberOfInvitedUsers() (int64, error) {
+func (o *User) GetNumberOfInvitedUsers(con bolt.Conn) (int64, error) {
 	var number int64
-
-	db, err := driver.NewDriver().OpenNeo("bolt://neo4j:123456@localhost:7687")
-	if err != nil {
-		log.Println("error connecting to neo4j:", err)
-		return 0, err
-	}
-	defer func() {
-		_ = db.Close()
-	}()
 
 	// Create query
 	cypher := `MATCH (n)-[r:INVITE]->() WHERE id(n) = {id} RETURN COUNT(r)`
 
-	// Prepare query
-	stmt, err := db.PrepareNeo(cypher)
-	if err != nil {
-		log.Println("error preparing graph:", err)
-		return 0, err
-	}
+	// Create query params
+	params := map[string]interface{}{"id": o.ID}
+
+	st := utils.PrepareSatement(cypher, con)
+	rows := utils.QueryStatement(st, params)
 	defer func() {
-		_ = stmt.Close()
+		_ = st.Close()
 	}()
 
-	// Create query params
-	query := map[string]interface{}{"id": o.ID}
-
-	// Make query
-	rows, err := stmt.QueryNeo(query)
-	if err != nil {
-		log.Println("error querying graph:", err)
-		return 0, err
-	}
-
 	// check results
-	row, _, err := rows.NextNeo()
+	row, _, _ := rows.NextNeo()
 	if len(row) > 0 {
 		for _, element := range row {
 			number = element.(int64)
@@ -193,15 +131,7 @@ func (o *User) GetNumberOfInvitedUsers() (int64, error) {
 	return number, nil
 }
 
-func (o *User) SingUp() error {
-	// Open connection
-	db, err := driver.NewDriver().OpenNeo("bolt://neo4j:123456@localhost:7687")
-	if err != nil {
-		log.Println("error connecting to neo4j:", err)
-	}
-	defer func() {
-		_ = db.Close()
-	}()
+func (o *User) SingUp(con bolt.Conn) error {
 
 	// Create query
 	cypher := `
@@ -212,11 +142,11 @@ func (o *User) SingUp() error {
 	// Prepare query
 	params := map[string]interface{}{"username": o.Username}
 
-	// Make query
-	rows, err := db.QueryNeo(cypher, params)
-	if err != nil {
-		log.Println("error querying graph:", err)
-	}
+	st := utils.PrepareSatement(cypher, con)
+	rows := utils.QueryStatement(st, params)
+	defer func() {
+		_ = st.Close()
+	}()
 
 	// Check Results
 	row, _, err := rows.NextNeo()
@@ -235,7 +165,7 @@ func (o *User) SingUp() error {
 		}
 	} else {
 		// open connection
-		db, err := driver.NewDriver().OpenNeo("bolt://neo4j:123456@localhost:7687")
+		db, err := bolt.NewDriver().OpenNeo("bolt://neo4j:123456@localhost:7687")
 		if err != nil {
 			log.Println("error connecting to neo4j:", err)
 		}
@@ -273,14 +203,11 @@ func (o *User) SingUp() error {
 }
 
 func (o *User) UpdateToken(apiToken string) error {
-	// open connection
-	db, err := driver.NewDriver().OpenNeo("bolt://neo4j:123456@localhost:7687")
-	if err != nil {
-		log.Println("error connecting to neo4j:", err)
-		return err
-	}
+
+	con, err := bolt.NewDriver().OpenNeo("bolt://neo4j:123456@localhost:7687")
+	utils.HandleError(err)
 	defer func() {
-		_ = db.Close()
+		_ = con.Close()
 	}()
 
 	// Create statement
@@ -291,32 +218,16 @@ func (o *User) UpdateToken(apiToken string) error {
 	// Create params
 	params := map[string]interface{}{"username": o.Username, "api_token": apiToken}
 
-	// Exec statement
-	result, updateTokenError := db.ExecNeo(cypher, params)
-	if updateTokenError != nil {
-		log.Println(updateTokenError)
-		return updateTokenError
-	}
+	st := utils.PrepareSatement(cypher, con)
+	utils.ExecuteStatement(st, params)
+	defer func() {
+		_ = st.Close()
+	}()
 
-	numResult, err := result.RowsAffected()
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	fmt.Println(numResult)
 	return nil
 }
 
-func (o *User) InviteUser(invitedID int64) error {
-	// Open connection
-	db, err := driver.NewDriver().OpenNeo("bolt://neo4j:123456@localhost:7687")
-	if err != nil {
-		log.Println("error connecting to neo4j:", err)
-	}
-	defer func() {
-		_ = db.Close()
-	}()
+func (o *User) InviteUser(con bolt.Conn, invitedID int64) error {
 
 	// Create query
 	cypher := `
@@ -330,62 +241,30 @@ func (o *User) InviteUser(invitedID int64) error {
 		"invite_id":  o.ID,
 		"invited_id": invitedID}
 
-	result, createErr := db.ExecNeo(cypher, params)
-	if createErr != nil {
-		log.Println(createErr)
-	}
-
-	numResult, err := result.RowsAffected()
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	log.Println(numResult)
-	if numResult < 1 {
-		err := fmt.Errorf("error creating relationship")
-		return err
-	}
+	st := utils.PrepareSatement(cypher, con)
+	utils.ExecuteStatement(st, params)
+	defer func() {
+		_ = st.Close()
+	}()
 
 	return nil
 }
 
-func (o *User) GetUserByID() error {
-
-	db, err := driver.NewDriver().OpenNeo("bolt://neo4j:123456@localhost:7687")
-	if err != nil {
-		log.Println("error connecting to neo4j:", err)
-		return err
-	}
-	defer func() {
-		_ = db.Close()
-	}()
+func (o *User) GetUserByID(con bolt.Conn) error {
 
 	// Create query
 	cypher := `MATCH (n:Comercial) where id(n) = {id} RETURN n`
 
-	// Prepare query
-	stmt, err := db.PrepareNeo(cypher)
-	if err != nil {
-		log.Println("error preparing graph:", err)
-		return err
-	}
-	defer func() {
-		_ = stmt.Close()
-	}()
-
 	// Create query params
-	query := map[string]interface{}{"id": o.ID}
+	params := map[string]interface{}{"id": o.ID}
 
-	// Make query
-	rows, err := stmt.QueryNeo(query)
-	if err != nil {
-		log.Println("error querying graph:", err)
-		return err
-	}
-
+	st := utils.PrepareSatement(cypher, con)
+	rows := utils.QueryStatement(st, params)
+	defer func() {
+		_ = st.Close()
+	}()
 	// check results
-	row, _, err := rows.NextNeo()
+	row, _, _ := rows.NextNeo()
 	if len(row) > 0 {
 		for _, element := range row {
 			currentNode := element.(graph.Node)
@@ -402,42 +281,19 @@ func (o *User) GetUserByID() error {
 	return nil
 }
 
-func (o *User) GetAll() ([]User, error) {
+func (o *User) GetAll(con bolt.Conn) ([]User, error) {
 	var list = make([]User, 0)
-
-	db, err := driver.NewDriver().OpenNeo("bolt://neo4j:123456@localhost:7687")
-	if err != nil {
-		log.Println("error connecting to neo4j:", err)
-		return list, err
-	}
-	defer func() {
-		_ = db.Close()
-	}()
 
 	// Create query
 	cypher := `
 	  MATCH (n:Comercial)
 	  RETURN n`
 
-	// Prepare query
-	stmt, err := db.PrepareNeo(cypher)
-	if err != nil {
-		log.Println("error preparing graph:", err)
-		return list, err
-	}
+	st := utils.PrepareSatement(cypher, con)
+	rows := utils.QueryStatement(st, nil)
 	defer func() {
-		_ = stmt.Close()
+		_ = st.Close()
 	}()
-
-	// Create query params
-	query := map[string]interface{}{}
-
-	// Make query
-	rows, err := stmt.QueryNeo(query)
-	if err != nil {
-		log.Println("error querying graph:", err)
-		return list, err
-	}
 
 	// check results
 	row, _, err := rows.NextNeo()
@@ -470,4 +326,33 @@ func (o *User) GetAll() ([]User, error) {
 	}
 
 	return list, nil
+}
+
+func (o *User) GetNumberOfUsers2(con bolt.Conn) (int64, error) {
+	var number int64
+
+	// Create query
+	cypher := `MATCH (n) RETURN count(*)`
+
+	st := utils.PrepareSatement(cypher, con)
+	rows := utils.QueryStatement(st, nil)
+	defer func() {
+		_ = st.Close()
+	}()
+
+	// check results
+	row, _, _ := rows.NextNeo()
+	if len(row) > 0 {
+		log.Println("sss found")
+		for _, element := range row {
+			fmt.Println(row)
+			number = element.(int64)
+		}
+	} else {
+		log.Println("not found")
+		err := sql.ErrNoRows
+		return 0, err
+	}
+
+	return number, nil
 }
