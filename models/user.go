@@ -131,7 +131,9 @@ func (o *User) GetNumberOfInvitedUsers(con bolt.Conn) (int64, error) {
 	return number, nil
 }
 
-func (o *User) SingUp(con bolt.Conn) error {
+func (o *User) SingUp() error {
+
+	con := utils.CreateConnection()
 
 	// Create query
 	cypher := `
@@ -164,39 +166,21 @@ func (o *User) SingUp(con bolt.Conn) error {
 			row, _, err = rows.NextNeo()
 		}
 	} else {
-		// open connection
-		db, err := bolt.NewDriver().OpenNeo("bolt://neo4j:123456@localhost:7687")
-		if err != nil {
-			log.Println("error connecting to neo4j:", err)
-		}
-		defer func() {
-			_ = db.Close()
-		}()
+		con := utils.CreateConnection()
 
 		log.Println("no")
-
-		hashPassword := utils.HashAndSalt([]byte(o.Password))
 
 		cypher := `CREATE (m:Comercial {username: {username}, password: {password}, name: {name}, api_token: "" })`
 		params := map[string]interface{}{
 			"name":     o.Name,
 			"username": o.Username,
-			"password": hashPassword}
+			"password": utils.HashAndSalt([]byte(o.Password))}
 
-		fmt.Println(hashPassword)
-
-		result, createErr := db.ExecNeo(cypher, params)
-		if createErr != nil {
-			log.Println(createErr)
-		}
-
-		numResult, err := result.RowsAffected()
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-
-		log.Println(numResult)
+		st := utils.PrepareSatement(cypher, con)
+		utils.ExecuteStatement(st, params)
+		defer func() {
+			_ = st.Close()
+		}()
 	}
 
 	return nil

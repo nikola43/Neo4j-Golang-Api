@@ -30,7 +30,7 @@ func SingUp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Insert user
-	err := user.SingUp(con)
+	err := user.SingUp()
 	utils.RespondHttpRequest(w, err, nil)
 }
 

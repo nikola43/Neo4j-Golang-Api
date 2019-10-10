@@ -65,39 +65,3 @@ func UpdateToken(username string, api_token string) {
 
 	log.Println(result)
 }
-
-func CheckIfUsersExistsOnDB(username string) bool {
-	var exists = false
-
-	// Open connection
-	db, err := bolt.NewDriver().OpenNeo("bolt://neo4j:123456@localhost:7687")
-	if err != nil {
-		log.Println("error connecting to neo4j:", err)
-	}
-	defer func() {
-		_ = db.Close()
-	}()
-
-	// Create query
-	cypher := `
-	  MATCH (n:Comercial)
-      WHERE n.username = {username}
-	  RETURN n`
-
-	// Prepare query
-	params := map[string]interface{}{"username": username}
-
-	// Make query
-	rows, err := db.QueryNeo(cypher, params)
-	if err != nil {
-		log.Println("error querying graph:", err)
-	}
-
-	// check if has result
-	row, _, err := rows.NextNeo()
-	if len(row) > 0 {
-		exists = true
-	}
-
-	return exists
-}
